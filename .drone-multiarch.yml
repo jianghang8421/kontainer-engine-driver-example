@@ -1,0 +1,46 @@
+kind: pipeline
+name: amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: build
+    image: rancher/dapper:v0.4.1
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    commands:
+      - dapper ci
+  - name: github_binary_prerelease
+    image: plugins/github-release:linux-amd64
+    settings:
+      prerelease: true
+      api_key:
+        from_secret: github_token
+      files:
+        - bin/kontainer-engine-driver-example-*
+      checksum:
+        - sha256
+    when:
+      event: tag
+      ref:
+        include: [ refs/tags/*rc* ]
+  - name: github_binary_release
+    image: plugins/github-release:linux-amd64
+    settings:
+      api_key:
+        from_secret: github_token
+      files:
+        - bin/kontainer-engine-driver-example-*
+      checksum:
+        - sha256
+    when:
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
